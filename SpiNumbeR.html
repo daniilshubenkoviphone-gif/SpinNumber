@@ -1,0 +1,1178 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root { color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; }
+[hidden] { display: none !important; }
+</style>
+<title>SpiNumbeR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&family=Russo+One&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: one narrow column. Title and coin balance on top, a graphite plate with digit drums and one big button, then a plain result line. */
+:root {
+  --bg: #E6E9E7;
+  --ink: #16201D;
+  --muted: #55625D;
+  --line: #C6CECA;
+  --accent: #F2B705;
+  --accent-ink: #1A1500;
+  --good: #17794A;
+  --plate: #1D2623;
+  --drum: #0F1513;
+  --digit: #F3EFE2;
+  --digit-dim: #98A39D;
+  --font-display: 'Russo One', 'Arial Black', Impact, sans-serif;
+  --font-body: 'Play', 'Trebuchet MS', system-ui, sans-serif;
+  --font-mono: 'Share Tech Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0D1210;
+    --ink: #E8EEEA;
+    --muted: #94A19B;
+    --line: #28332F;
+    --accent: #F5C21B;
+    --accent-ink: #1A1500;
+    --good: #4CC78A;
+    --plate: #1B2421;
+    --drum: #090E0C;
+    --digit: #F3EFE2;
+    --digit-dim: #8E9A94;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0D1210;
+  --ink: #E8EEEA;
+  --muted: #94A19B;
+  --line: #28332F;
+  --accent: #F5C21B;
+  --accent-ink: #1A1500;
+  --good: #4CC78A;
+  --plate: #1B2421;
+  --drum: #090E0C;
+  --digit: #F3EFE2;
+  --digit-dim: #8E9A94;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  padding-block: 20px 36px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button { font: inherit; }
+
+.app { max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+.top { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; }
+h1 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(24px, 7vw, 34px);
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+  margin: 0;
+  text-wrap: balance;
+}
+.coins { text-align: right; flex: none; }
+.coins small { display: block; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.coins output { display: inline-block; font-family: var(--font-mono); font-weight: 400; font-size: 26px; font-variant-numeric: tabular-nums; }
+.coins output.pop { animation: pop 0.5s ease-out; }
+@keyframes pop { 0% { color: var(--good); transform: translateY(-2px); } 100% { color: inherit; transform: none; } }
+
+.tabs { display: flex; gap: 6px; }
+.tab {
+  flex: 1; min-height: 42px; border-radius: 10px; cursor: pointer; background: none; color: var(--ink);
+  border: 1px solid var(--line); font-weight: 700; font-size: 15px;
+}
+.tab[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.tab:disabled { opacity: 0.55; cursor: default; }
+.tab .n { font-family: var(--font-mono); font-weight: 400; font-size: 12px; margin-left: 6px; opacity: 0.75; }
+
+.shop ul { list-style: none; margin: 0 0 10px; padding: 0; border-top: 1px solid var(--line); }
+.shop li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.shop .nm { font-weight: 700; }
+.shop .ef { grid-column: 1; color: var(--muted); font-size: 13px; }
+.buy {
+  grid-column: 2; grid-row: 1 / span 2; min-height: 40px; min-width: 104px; padding: 0 14px; border-radius: 10px; border: 0;
+  background: var(--accent); color: var(--accent-ink); font-weight: 700; cursor: pointer; font-variant-numeric: tabular-nums;
+}
+.buy:disabled { background: none; color: var(--muted); border: 1px solid var(--line); cursor: default; opacity: 0.8; }
+
+.tasks .buy { grid-row: 1 / span 3; }
+.bar { grid-column: 1; height: 5px; border-radius: 3px; background: var(--line); overflow: hidden; margin-top: 4px; }
+.bar i { display: block; height: 100%; width: 0; background: var(--good); transition: width 0.3s; }
+
+.machine {
+  --w: clamp(30px, calc((100vw - 126px) / 7), 54px);
+  --h: calc(var(--w) * 1.5);
+  background: var(--plate);
+  border-radius: 18px;
+  padding: 18px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 12px 26px -14px rgba(0, 0, 0, 0.5);
+}
+.machine :focus-visible { outline-color: var(--digit); }
+.rows { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.row { display: flex; gap: 5px; align-items: center; justify-content: center; }
+.drum {
+  position: relative; width: var(--w); height: var(--h); border-radius: 9px; overflow: hidden;
+  background: var(--drum); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+}
+.drum::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0) 70%, rgba(0, 0, 0, 0.6));
+}
+.strip { height: calc(var(--h) * 11); will-change: transform; }
+.strip span {
+  display: flex; align-items: center; justify-content: center; height: var(--h);
+  font-family: var(--font-display); font-weight: 400; font-size: calc(var(--w) * 0.78);
+  color: var(--digit); line-height: 1;
+}
+.drum.moving .strip { filter: blur(1.4px); }
+.drum.landed { animation: land 0.22s ease-out; }
+@keyframes land { 0% { transform: translateY(-3px); } 100% { transform: none; } }
+.drum.fixed .strip { height: var(--h); }
+.drum.fixed .strip span { color: var(--digit-dim); }
+.sym {
+  min-width: 12px; display: flex; align-items: center; justify-content: center;
+  color: var(--digit-dim); font-family: var(--font-mono); font-weight: 400; font-size: calc(var(--w) * 0.55);
+}
+.sym.prefix { color: var(--digit); font-family: var(--font-display); font-weight: 400; font-size: calc(var(--w) * 0.62); margin-right: 4px; }
+
+.spin {
+  height: 56px; border: 0; border-radius: 12px; cursor: pointer;
+  background: var(--accent); color: var(--accent-ink);
+  font-family: var(--font-display); font-weight: 400; font-size: 18px; letter-spacing: 0.02em;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
+  transition: transform 0.08s, box-shadow 0.08s;
+}
+.spin:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35); }
+.spin:disabled { opacity: 0.55; cursor: default; }
+
+.result { display: flex; flex-direction: column; gap: 8px; }
+.verdict { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; min-height: 40px; }
+.verdict .big { font-family: var(--font-display); font-weight: 400; font-size: 32px; font-variant-numeric: tabular-nums; line-height: 1.2; color: var(--good); }
+.verdict .unit { color: var(--muted); }
+.verdict .none { font-family: var(--font-display); font-weight: 400; font-size: 18px; color: var(--muted); }
+.note { margin: 0; color: var(--muted); }
+.note:empty { display: none; }
+.hits { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.hits:empty { display: none; }
+.hits li { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.hits .pts { font-family: var(--font-mono); font-weight: 400; color: var(--good); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.save {
+  height: 42px; border-radius: 10px; cursor: pointer; background: none; color: var(--digit);
+  border: 1px solid rgba(255, 255, 255, 0.22); font-size: 15px; font-weight: 700;
+}
+.save:hover:not(:disabled) { border-color: var(--digit); }
+.save:disabled { color: var(--digit-dim); border-color: rgba(255, 255, 255, 0.1); cursor: default; }
+
+.pity { margin: 0; text-align: center; font-size: 12.5px; color: var(--digit-dim); }
+
+h2 { font-family: var(--font-display); font-weight: 400; font-size: 16px; margin: 0 0 10px; }
+h2 .count { color: var(--muted); font-family: var(--font-mono); font-size: 13px; margin-left: 6px; }
+.collection :focus-visible { outline-color: var(--ink); }
+.collection ol { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.collection li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1px 8px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.collection .num { font-family: var(--font-mono); font-weight: 400; font-size: 15px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.collection .why { grid-column: 1; color: var(--muted); font-size: 13px; }
+.collection .del {
+  grid-column: 2; grid-row: 1 / span 2; background: none; border: 0; border-radius: 8px;
+  color: var(--muted); font-size: 22px; line-height: 1; padding: 6px 10px; cursor: pointer;
+}
+.collection .del:hover { color: var(--ink); }
+.collection .empty { display: block; color: var(--muted); padding: 10px 0; }
+
+.foot { margin: 0; color: var(--muted); font-size: 12.5px; }
+
+.admin { border: 1px dashed var(--line); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.cli-log { list-style: none; margin: 0; padding: 0; max-height: 180px; overflow-y: auto; font-family: var(--font-mono); font-size: 13px; color: var(--muted); }
+.cli-log li { padding: 2px 0; overflow-wrap: anywhere; }
+.cli-log li.cmd { color: var(--ink); }
+.cli-log li.err { color: var(--accent); }
+.cli-prompt { font-family: var(--font-mono); color: var(--accent); align-self: center; }
+.adm-row { display: flex; gap: 8px; }
+.adm-row input {
+  flex: 1; min-width: 0; min-height: 40px; padding: 0 10px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: inherit; font-family: var(--font-mono);
+}
+.adm-row .buy { flex: none; }
+
+.snd {
+  margin-top: 6px; background: none; color: var(--muted); border: 1px solid var(--line); border-radius: 999px;
+  font-size: 12px; padding: 3px 10px; cursor: pointer;
+}
+.snd[aria-pressed="false"] { opacity: 0.7; }
+.vol { width: 96px; margin-top: 6px; accent-color: var(--accent); vertical-align: middle; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<main class="app">
+  <header class="top">
+    <h1>SpiNumbeR</h1>
+    <div class="coins"><small>Рубли</small><output id="balance">800</output><br><button type="button" class="snd" id="sound" aria-pressed="true">Звук · вкл</button><br><input type="range" class="vol" id="vol" min="0" max="100" step="5" value="90" aria-label="Громкость"></div>
+  </header>
+
+  <section class="admin" id="admin" aria-label="Командная строка" hidden>
+    <ol class="cli-log" id="cliLog" aria-live="polite"></ol>
+    <div class="adm-row">
+      <span class="cli-prompt" aria-hidden="true">&gt;</span>
+      <input id="cliIn" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="help" aria-label="Введите команду">
+    </div>
+  </section>
+
+  <div class="tabs" id="tabs" role="group" aria-label="Страна номера"></div>
+
+  <section class="machine" aria-label="SpiNumbeR">
+    <div class="rows">
+      <div class="row" id="rowCode"></div>
+      <div class="row" id="rowNum"></div>
+    </div>
+    <button type="button" class="spin" id="spin">Крутить · 40</button>
+    <button type="button" class="save" id="auto">Авто-крутка</button>
+    <button type="button" class="save" id="save" hidden>В коллекцию</button>
+    <p class="pity" id="pity"></p>
+  </section>
+
+  <section class="result" aria-live="polite" aria-label="Результат">
+    <div class="verdict" id="verdict"></div>
+    <p class="note" id="note"></p>
+    <ul class="hits" id="hits"></ul>
+  </section>
+
+
+  <div class="tabs" role="group" aria-label="Раздел">
+    <button type="button" class="tab" id="tabTasks" aria-pressed="false">Задания<span class="n" id="taskBadge"></span></button>
+    <button type="button" class="tab" id="tabCol" aria-pressed="true">Коллекция<span class="n" id="colBadge"></span></button>
+  </div>
+
+  <section class="shop" id="panelTasks" aria-label="Задания" hidden>
+    <h2>Задания <span class="count" id="taskCount"></span></h2>
+    <ul class="tasks" id="tasks"></ul>
+  </section>
+
+  <section class="collection" id="panelCol" aria-label="Коллекция номеров">
+    <h2>Коллекция · <span id="colName"></span> <span class="count" id="count"></span></h2>
+    <ol id="list"></ol>
+  </section>
+
+  <p class="foot">Номера случайные и могут совпасть с настоящими. Звонить по ним не нужно.</p>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  // Odds cut 1.1x: fancy-number chance and all-same chance. Every 50th spin has 5x luck.
+  // All money is in rubles. One spin costs 400 rubles (old 20 coins x 20).
+  var COST = 400, START = 20000, MAXCOL = 100, SCALE = 8, CHANCE = 0.15 / 1.1, KEY = 'nomernoy-avtomat-rub';
+  var LUCK_EVERY = 50, LUCK_BOOST = 5;
+  // Chance per beautiful draw of an all-same number.
+  var UNIFORM_P = 0.00013 / 1.1;
+  // Numbers worth at least this many coins go to the collection by themselves.
+  var AUTO_SAVE_MIN = 2000;
+  var IDLE_NOTE = 'Нажмите «Крутить». Обычный номер даёт 80–200 ₽, красивый (повторы, лесенки, зеркала) бывает примерно в 14% круток.';
+
+  function evaluate(d) {
+    var n = d.length, t = d.slice(n - 7);
+    var hits = [];
+    function add(name, pts) { hits.push({ name: name, pts: Math.round(pts * SCALE) }); }
+    var run = 1, bestRun = 1, up = 1, bestUp = 1, dn = 1, bestDn = 1;
+    for (var i = 1; i < n; i++) {
+      run = d[i] === d[i - 1] ? run + 1 : 1; if (run > bestRun) bestRun = run;
+      up = d[i] === d[i - 1] + 1 ? up + 1 : 1; if (up > bestUp) bestUp = up;
+      dn = d[i] === d[i - 1] - 1 ? dn + 1 : 1; if (dn > bestDn) bestDn = dn;
+    }
+    var SAME = { 3: 200, 4: 600, 5: 1500, 6: 3000, 7: 6000, 8: 10000, 9: 15000, 10: 25000 };
+    var UP = { 4: 300, 5: 800, 6: 2000, 7: 5000, 8: 8000, 9: 12000, 10: 20000 };
+    var DOWN = { 4: 250, 5: 700, 6: 1800, 7: 4500, 8: 7000, 9: 11000, 10: 18000 };
+    if (bestRun >= 3) add(bestRun + ' одинаковых подряд', SAME[bestRun]);
+    if (bestUp >= 4) add('Лесенка вверх из ' + bestUp, UP[bestUp]);
+    if (bestDn >= 4) add('Лесенка вниз из ' + bestDn, DOWN[bestDn]);
+    var PAL = { 4: 250, 5: 400, 6: 700, 7: 1200, 8: 2000, 9: 3000, 10: 5000 };
+    var found = false;
+    for (var k = n; k >= 4 && !found; k--) {
+      for (var s0 = 0; s0 + k <= n; s0++) {
+        var w = d.slice(s0, s0 + k);
+        var pal = w.every(function (x, j) { return x === w[k - 1 - j]; });
+        var flat = w.every(function (x) { return x === w[0]; });
+        if (pal && !flat) { add('Зеркало из ' + k + ' цифр', PAL[k]); found = true; break; }
+      }
+    }
+    var tr = false;
+    for (var s1 = 0; s1 + 6 <= n && !tr; s1++) {
+      var a3 = d.slice(s1, s1 + 3), b3 = d.slice(s1 + 3, s1 + 6);
+      if (a3.join('') === b3.join('') && !(a3[0] === a3[1] && a3[1] === a3[2])) { add('Повтор тройки', 400); tr = true; }
+    }
+    var L = t.slice(3);
+    var pr = false, rp = false;
+    for (var s2 = 0; s2 + 4 <= n; s2++) {
+      var p0 = d[s2], p1 = d[s2 + 1], p2 = d[s2 + 2], p3 = d[s2 + 3];
+      if (!pr && p0 === p1 && p2 === p3 && p0 !== p2) { add('Две пары подряд', 200); pr = true; }
+      if (!rp && p0 === p2 && p1 === p3 && p0 !== p1) { add('Повтор пары', 200); rp = true; }
+    }
+    var yr = L[0] * 1000 + L[1] * 100 + L[2] * 10 + L[3];
+    if (yr >= 1950 && yr <= 2026) add('Год ' + yr, 120);
+    if (t[5] === 0 && t[6] === 0 && t[4] !== 0) add('Круглый конец', 100);
+    var sevens = d.filter(function (x) { return x === 7; }).length;
+    if (sevens >= 3) add('Семёрки ×' + sevens, 100 * (sevens - 2));
+    hits.sort(function (a, b) { return b.pts - a.pts; });
+    return { hits: hits, total: hits.reduce(function (s, h) { return s + h.pts; }, 0) };
+  }
+
+  var COUNTRIES = {
+    ru: { name: 'Russia', label: 'Россия', prefix: '+7', len: 10, fixed: 1, fixedDrums: 1, groups: [3, 2, 2], codes: [[9]], start: [9, 1, 6, 1, 2, 3, 4, 5, 6, 7] },
+    us: { name: 'USA', label: 'США', prefix: '+1', len: 10, fixed: 3, fixedDrums: 0, groups: [3, 4],
+          codes: [[2, 0, 2], [2, 1, 2], [2, 1, 3], [3, 0, 5], [3, 1, 0], [3, 1, 2], [4, 1, 5], [4, 0, 4], [6, 1, 7], [6, 4, 6], [7, 0, 2], [7, 1, 3], [7, 1, 8], [7, 8, 6], [9, 1, 7], [2, 0, 6]],
+          start: [2, 1, 2, 5, 5, 5, 0, 1, 2, 3] },
+    ua: { name: 'Ukraine', label: 'Украина', prefix: '+380', len: 9, fixed: 2, fixedDrums: 0, groups: [3, 2, 2],
+          codes: [[3, 9], [5, 0], [6, 3], [6, 6], [6, 7], [6, 8], [7, 3], [9, 1], [9, 2], [9, 3], [9, 4], [9, 5], [9, 6], [9, 7], [9, 8], [9, 9]],
+          start: [6, 7, 1, 2, 3, 4, 5, 6, 7] }
+  };
+  var ORDER = ['ru', 'us', 'ua'];
+  function cfg() { return COUNTRIES[state.country]; }
+
+  function rnd(n) { return Math.floor(Math.random() * n); }
+  function pickW(pairs) {
+    var sum = 0, i;
+    for (i = 0; i < pairs.length; i++) sum += pairs[i][1];
+    var x = Math.random() * sum;
+    for (i = 0; i < pairs.length; i++) { x -= pairs[i][1]; if (x < 0) return pairs[i][0]; }
+    return pairs[pairs.length - 1][0];
+  }
+  function randomNumber() {
+    var c = cfg(), d = c.codes[rnd(c.codes.length)].slice();
+    while (d.length < c.len) d.push(rnd(10));
+    return d;
+  }
+  // All digits equal, using only prefixes that allow it (Russia: 9s, Ukraine: 666666666 or 999999999, USA: none).
+  function uniformNumber() {
+    var c = cfg(), opts = c.codes.filter(function (code) {
+      return code.every(function (x) { return x === code[0]; });
+    });
+    if (!opts.length) return null;
+    var x = opts[rnd(opts.length)][0], d = [];
+    while (d.length < c.len) d.push(x);
+    return d;
+  }
+  // Builds a number with one deliberate pattern; the rest of the digits stay random.
+  function beautiful() {
+    if (Math.random() < UNIFORM_P * luckNow()) { var u = uniformNumber(); if (u) return u; }
+    var d = randomNumber(), o = d.length - 7, t = d.slice(o), i, j;
+    var kind = pickW([['same', 30], ['ladder', 14], ['mirror', 16], ['pairs', 8], ['repeat', 8], ['year', 12], ['round', 6], ['triple', 5], ['seven', 6]]);
+    if (kind === 'seven') {
+      var c = pickW([[3, 80], [4, 17], [5, 3]]), pos = [];
+      for (i = cfg().fixed; i < d.length; i++) pos.push(i);
+      for (i = 0; i < c; i++) { j = rnd(pos.length); d[pos[j]] = 7; pos.splice(j, 1); }
+      return d;
+    }
+    if (kind === 'same') {
+      var n = pickW([[3, 78], [4, 17], [5, 4], [6, 1]]), x = rnd(10), s = rnd(8 - n);
+      for (j = 0; j < n; j++) t[s + j] = x;
+    } else if (kind === 'ladder') {
+      var m = pickW([[4, 80], [5, 16], [6, 4]]), dir = rnd(2) ? 1 : -1;
+      var a = dir === 1 ? rnd(10 - (m - 1)) : (m - 1) + rnd(10 - (m - 1)), s2 = rnd(8 - m);
+      for (j = 0; j < m; j++) t[s2 + j] = a + dir * j;
+    } else if (kind === 'mirror') {
+      var k = pickW([[4, 70], [5, 22], [6, 8]]), s3 = 7 - k, half = Math.ceil(k / 2);
+      for (j = 0; j < half; j++) t[s3 + j] = rnd(10);
+      for (j = 0; j < half; j++) t[s3 + k - 1 - j] = t[s3 + j];
+      if (t.slice(s3).every(function (v) { return v === t[s3]; })) { t[s3] = (t[s3] + 1) % 10; t[s3 + k - 1] = t[s3]; }
+    } else if (kind === 'pairs' || kind === 'repeat') {
+      var p = rnd(10), q = rnd(10);
+      while (q === p) q = rnd(10);
+      if (kind === 'pairs') { t[3] = p; t[4] = p; t[5] = q; t[6] = q; }
+      else { t[3] = p; t[4] = q; t[5] = p; t[6] = q; }
+    } else if (kind === 'year') {
+      var y = 1950 + rnd(77);
+      t[3] = Math.floor(y / 1000); t[4] = Math.floor(y / 100) % 10; t[5] = Math.floor(y / 10) % 10; t[6] = y % 10;
+    } else if (kind === 'triple') {
+      var a1 = rnd(10), b1 = rnd(10), c1 = rnd(10);
+      if (a1 === b1 && b1 === c1) c1 = (c1 + 1) % 10;
+      t[1] = a1; t[2] = b1; t[3] = c1; t[4] = a1; t[5] = b1; t[6] = c1;
+    } else if (kind === 'round') {
+      t[5] = 0; t[6] = 0;
+      if (t[4] === 0) t[4] = 1 + rnd(9);
+    }
+    for (i = 0; i < 7; i++) d[o + i] = t[i];
+    return d;
+  }
+  // Luck multiplier for the next spin: every LUCK_EVERY-th spin gets LUCK_BOOST.
+  function luckNow() {
+    return state.luck * ((state.stats.spins + 1) % LUCK_EVERY === 0 ? LUCK_BOOST : 1);
+  }
+  // About CHANCE of spins give a number with a combination, all others a plain one.
+  function nextNumber() {
+    var d, fancy = Math.random() < Math.min(1, CHANCE * luckNow());
+    if (fancy) {
+      do { d = beautiful(); } while (evaluate(d).total === 0);
+    } else {
+      do { d = randomNumber(); } while (evaluate(d).total > 0);
+    }
+    return d;
+  }
+
+  function $(id) { return document.getElementById(id); }
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined) n.textContent = text;
+    return n;
+  }
+  function pl(n, f) {
+    var a = Math.abs(n) % 100, b = a % 10;
+    if (a > 10 && a < 20) return f[2];
+    if (b > 1 && b < 5) return f[1];
+    if (b === 1) return f[0];
+    return f[2];
+  }
+  function fmtN(n) { return Number(n).toLocaleString('ru-RU'); }
+  function fmtNum(d, c) {
+    c = c || state.country;
+    if (c === 'ru') return '+7 (' + d[0] + d[1] + d[2] + ') ' + d[3] + d[4] + d[5] + '-' + d[6] + d[7] + '-' + d[8] + d[9];
+    if (c === 'us') return '+1 (' + d[0] + d[1] + d[2] + ') ' + d[3] + d[4] + d[5] + '-' + d[6] + d[7] + d[8] + d[9];
+    return COUNTRIES[c].prefix + ' (' + d[0] + d[1] + ') ' + d[2] + d[3] + d[4] + '-' + d[5] + d[6] + '-' + d[7] + d[8];
+  }
+  function curDigits() { return state.digits[state.country]; }
+
+  var reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  var state = null, reels = [], fixedEls = [], pending = [], busy = false, autoOn = false, autoLeft = 0;
+  var raf = 0, last = 0, spinStart = 0, shown = 0;
+
+  var balEl = $('balance'), spinBtn = $('spin'), verdict = $('verdict'), noteEl = $('note'), hitsEl = $('hits');
+  var tabsEl = $('tabs'), colName = $('colName'), tabBtns = {}, autoBtn = $('auto');
+  var saveBtn = $('save'), listEl = $('list'), countEl = $('count'), pityEl = $('pity');
+
+  function fresh() {
+    var f = { speed: 1, luck: 1, balance: START, free: 0, auto: 0, stats: { spins: 0, fancy: 0, saves: 0, best: 0, tried: { ru: false, us: false, ua: false } }, claimed: {}, country: 'ru', digits: {}, has: {}, collection: [], dry: 0 };
+    ORDER.forEach(function (c) { f.digits[c] = COUNTRIES[c].start.slice(); f.has[c] = false; });
+    return f;
+  }
+  function validDigits(c, a) {
+    var k = COUNTRIES[c];
+    return Array.isArray(a) && a.length === k.len &&
+      a.every(function (x) { return Number.isInteger(x) && x >= 0 && x <= 9; }) &&
+      k.codes.some(function (code) { return code.join('') === a.slice(0, k.fixed).join(''); });
+  }
+  function sanitize(s) {
+    var f = fresh();
+    if (!s || typeof s !== 'object') return f;
+    if (isFinite(s.balance) && s.balance >= 0) f.balance = Math.floor(s.balance);
+    if (COUNTRIES[s.country]) f.country = s.country;
+    if (Number.isInteger(s.auto) && s.auto >= 0 && s.auto <= 3) f.auto = s.auto > 0 ? 1 : 0; // old tiers all map to the single unlimited one
+    if (Number.isInteger(s.free) && s.free >= 0 && s.free <= 5) f.free = s.free;
+    if (s.stats && typeof s.stats === 'object') {
+      ['spins', 'fancy', 'saves', 'best'].forEach(function (k) {
+        if (Number.isInteger(s.stats[k]) && s.stats[k] >= 0) f.stats[k] = s.stats[k];
+      });
+      if (s.stats.tried && typeof s.stats.tried === 'object') {
+        ORDER.forEach(function (c) { f.stats.tried[c] = s.stats.tried[c] === true; });
+      }
+    }
+    if (s.claimed && typeof s.claimed === 'object') {
+      Object.keys(s.claimed).forEach(function (k) { if (s.claimed[k] === true) f.claimed[k] = true; });
+    }
+    var dg = Array.isArray(s.digits) ? { ru: s.digits } : (s.digits && typeof s.digits === 'object' ? s.digits : {});
+    ORDER.forEach(function (c) {
+      if (validDigits(c, dg[c])) { f.digits[c] = dg[c].slice(); f.has[c] = true; }
+    });
+    if (typeof s.speed === 'number' && s.speed >= 0.25 && s.speed <= 4) f.speed = s.speed;
+    if (typeof s.luck === 'number' && s.luck >= 0.1 && s.luck <= 10) f.luck = s.luck;
+    if (Array.isArray(s.collection)) {
+      var cnt = { ru: 0, us: 0, ua: 0 };
+      f.collection = s.collection
+        .filter(function (t) { return t && typeof t.num === 'string' && isFinite(t.pts) && (!t.country || COUNTRIES[t.country]); })
+        .map(function (t) {
+          var c = COUNTRIES[t.country] ? t.country : 'ru', k = COUNTRIES[c];
+          var item = { country: c, num: t.num.slice(0, 24), pts: Math.floor(t.pts), why: String(t.why || '').slice(0, 160) };
+          var dg = t.num.replace(/\D/g, '').slice(k.prefix.length - 1).split('').map(Number);
+          if (dg.length === k.len) {
+            var r = evaluate(dg);
+            item.pts = r.total;
+            item.why = r.hits.map(function (h) { return h.name; }).join(', ');
+          }
+          return item;
+        })
+        .filter(function (t) { return ++cnt[t.country] <= MAXCOL; });
+    }
+    return f;
+  }
+  function readStore() { try { var raw = localStorage.getItem(KEY); return raw ? JSON.parse(raw) : null; } catch (e) { return null; } }
+  function writeStore() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* storage unavailable */ } }
+
+  function paint(r) {
+    var p = ((r.pos % 10) + 10) % 10;
+    r.strip.style.transform = 'translateY(-' + (p * 100 / 11) + '%)';
+  }
+
+  function sym(text, cls) { return el('span', 'sym' + (cls ? ' ' + cls : ''), text); }
+  function fixedDrum() {
+    var drum = el('div', 'drum fixed'), strip = el('div', 'strip'), sp = el('span', '', '0');
+    strip.appendChild(sp);
+    drum.appendChild(strip);
+    fixedEls.push(sp);
+    return drum;
+  }
+  function reelDrum(i) {
+    var drum = el('div', 'drum'), strip = el('div', 'strip');
+    for (var k = 0; k < 11; k++) strip.appendChild(el('span', '', String(k % 10)));
+    drum.appendChild(strip);
+    reels.push({ i: i, drum: drum, strip: strip, pos: 0, digit: 0, mode: 'idle', v: 0, stopAt: 0, from: 0, to: 0, dur: 0, t0: 0 });
+    return drum;
+  }
+  function build() {
+    var rc = $('rowCode'), rn = $('rowNum'), c = cfg(), k, extra = c.len - c.fixedDrums - 7, n = 0;
+    rc.textContent = ''; rn.textContent = '';
+    reels = []; fixedEls = [];
+    rc.appendChild(sym(c.prefix, 'prefix'));
+    rc.appendChild(sym('('));
+    for (k = 0; k < c.fixedDrums; k++) rc.appendChild(fixedDrum());
+    for (k = 0; k < extra; k++) rc.appendChild(reelDrum(n++));
+    rc.appendChild(sym(')'));
+    c.groups.forEach(function (g, gi) {
+      if (gi) rn.appendChild(sym('–'));
+      for (k = 0; k < g; k++) rn.appendChild(reelDrum(n++));
+    });
+  }
+  function showDigits(d) {
+    var f = cfg().fixedDrums;
+    fixedEls.forEach(function (sp, i) { sp.textContent = String(d[i]); });
+    reels.forEach(function (r) {
+      r.digit = d[r.i + f];
+      r.pos = r.digit;
+      r.drum.classList.remove('landed', 'moving');
+      paint(r);
+    });
+  }
+  function buildTabs() {
+    ORDER.forEach(function (c) {
+      var b = el('button', 'tab'), n = el('span', 'n');
+      b.type = 'button';
+      b.appendChild(document.createTextNode(COUNTRIES[c].label));
+      b.appendChild(n);
+      b.addEventListener('click', function () { setCountry(c); });
+      tabsEl.appendChild(b);
+      tabBtns[c] = { b: b, n: n };
+    });
+  }
+  function colCount(c) { return state.collection.filter(function (t) { return t.country === c; }).length; }
+
+  function updateUI() {
+    var broke = state.balance < COST && state.free <= 0, run = busy || autoOn;
+    spinBtn.disabled = run;
+    spinBtn.textContent = run ? 'Крутится…' : (broke ? 'Начать заново' : state.free > 0 ? 'Бесплатная крутка · ' + state.free : 'Крутить · ' + fmtN(COST) + ' ₽');
+    // Auto-spin unlocks for good once the balance reaches the threshold. The button starts and stops it.
+    if (!state.auto && state.balance >= AUTO[0].price) { state.auto = 1; writeStore(); }
+    autoBtn.hidden = false;
+    if (!state.auto) {
+      autoBtn.textContent = 'Откроется при ' + fmtN(AUTO[0].price) + ' ₽';
+      autoBtn.disabled = true;
+    } else {
+      autoBtn.textContent = autoOn ? 'Стоп' : 'Авто-крутка';
+      autoBtn.disabled = busy && !autoOn;
+    }
+    updateTasks();
+    var num = fmtNum(curDigits());
+    var inList = state.collection.some(function (t) { return t.num === num; });
+    ORDER.forEach(function (c) {
+      var t = tabBtns[c], k = colCount(c);
+      t.b.setAttribute('aria-pressed', c === state.country ? 'true' : 'false');
+      t.b.disabled = busy || autoOn;
+      t.n.textContent = k ? String(k) : '';
+    });
+    saveBtn.hidden = !state.has[state.country] || busy || autoOn;
+    saveBtn.disabled = inList;
+    saveBtn.textContent = inList ? 'Номер в коллекции' : 'В коллекцию';
+    var nextLuck = Math.ceil((state.stats.spins + 1) / LUCK_EVERY) * LUCK_EVERY;
+    var toLuck = nextLuck - state.stats.spins - 1;
+    pityEl.textContent = toLuck === 0
+      ? 'Эта крутка с удачей ×' + LUCK_BOOST
+      : 'Удача ×' + LUCK_BOOST + ' через ' + toLuck + ' ' + pl(toLuck, ['крутку', 'крутки', 'круток']);
+  }
+
+  function setBalance(v, animate) {
+    var from = shown;
+    state.balance = v;
+    if (!animate || reduce) { shown = v; balEl.textContent = fmtN(v); return; }
+    var t0 = performance.now(), dur = Math.min(900, 300 + Math.abs(v - from));
+    balEl.classList.remove('pop'); void balEl.offsetWidth; balEl.classList.add('pop');
+    (function step(now) {
+      var t = Math.min(1, (now - t0) / dur);
+      shown = Math.round(from + (v - from) * t);
+      balEl.textContent = fmtN(shown);
+      if (t < 1) requestAnimationFrame(step);
+    })(t0);
+  }
+
+  function clearResult() {
+    verdict.textContent = '';
+    hitsEl.textContent = '';
+    noteEl.textContent = '';
+  }
+
+  function showResult(res) {
+    clearResult();
+    if (res.total > 0) {
+      verdict.appendChild(el('span', 'big', '+' + fmtN(res.total)));
+      verdict.appendChild(el('span', 'unit', '₽'));
+      res.hits.forEach(function (h) {
+        var li = el('li');
+        li.appendChild(el('span', '', h.name));
+        li.appendChild(el('span', 'pts', '+' + fmtN(h.pts)));
+        hitsEl.appendChild(li);
+      });
+      setBalance(state.balance + res.total, true);
+    } else {
+      var cons = (4 + rnd(7)) * 20;
+      verdict.appendChild(el('span', 'none', 'Без комбинаций 💩'));
+      verdict.appendChild(el('span', 'unit', '+' + cons + ' ₽ за попытку'));
+      setBalance(state.balance + cons, true);
+    }
+    if (state.balance < COST && state.free <= 0) {
+      state.free = 5;
+      noteEl.textContent = 'Рубли закончились. Держите 5 бесплатных круток.';
+    }
+    writeStore();
+    updateUI();
+  }
+
+  function beginStop(r, ts) {
+    var d = r.target;
+    var end = Math.ceil(r.pos) + 10;
+    end += ((d - end % 10) + 10) % 10;
+    r.digit = d;
+    r.from = r.pos;
+    r.to = end;
+    r.dur = Math.max(250, 2 * (end - r.pos) / r.v * 1000) * (reduce ? 0.4 : 1) / state.speed;
+    r.t0 = ts;
+    r.mode = 'stop';
+  }
+
+  function frame(ts) {
+    var dt = Math.min(0.05, (ts - last) / 1000);
+    last = ts;
+    var active = 0;
+    reels.forEach(function (r) {
+      if (r.mode === 'spin') {
+        active++;
+        r.pos = (r.pos + r.v * dt) % 10;
+        if (ts - spinStart >= r.stopAt) beginStop(r, ts);
+      } else if (r.mode === 'stop') {
+        active++;
+        var t = (ts - r.t0) / r.dur;
+        if (t >= 1) {
+          r.pos = r.digit;
+          r.mode = 'idle';
+          r.drum.classList.remove('moving');
+          r.drum.classList.add('landed');
+          playLand();
+        } else {
+          r.pos = r.from + (r.to - r.from) * (1 - (1 - t) * (1 - t));
+          if (t > 0.55) r.drum.classList.remove('moving');
+        }
+      }
+      if (r.mode !== 'idle') tickCheck(r);
+      paint(r);
+    });
+    if (active) raf = requestAnimationFrame(frame);
+    else finish();
+  }
+
+  function finish() {
+    busy = false;
+    state.has[state.country] = true;
+    state.digits[state.country] = pending.concat(reels.map(function (r) { return r.digit; }));
+    fixedEls.forEach(function (sp, i) { sp.textContent = String(pending[i]); });
+    var res = evaluate(curDigits());
+    state.stats.spins++;
+    state.stats.tried[state.country] = true;
+    if (res.total > 0) state.stats.fancy++;
+    if (res.total > state.stats.best) state.stats.best = res.total;
+    showResult(res);
+    if (res.total >= AUTO_SAVE_MIN) {
+      playMoney();
+      var num = fmtNum(curDigits());
+      saveNum();
+      if (state.collection.length && state.collection[0].num === num) {
+        noteEl.textContent = (noteEl.textContent ? noteEl.textContent + ' ' : '') + 'Редкий номер сохранён в коллекцию.';
+      }
+    }
+    if (autoOn) {
+      // A rare number (saved to the collection) pauses auto-spin for 3 seconds and then carries on.
+      var rare = res.total >= AUTO_SAVE_MIN;
+      if ((res.total > 0 && !rare) || autoLeft <= 0 || (state.balance < COST && state.free <= 0)) stopAuto();
+      else setTimeout(autoStep, (rare ? 3000 : (reduce ? 150 : 450)) / state.speed);
+    }
+  }
+
+  function resetGame() {
+    setBalance(START, false);
+    clearResult();
+    noteEl.textContent = IDLE_NOTE;
+    writeStore();
+    updateUI();
+  }
+
+  // Sound: everything is synthesized, no audio files. No background music.
+  var audio = { ctx: null, master: null, noise: null, on: true, vol: 90 };
+  var soundBtn = $('sound'), volEl = $('vol');
+  try {
+    audio.on = localStorage.getItem('nomernoy-sound') !== 'off';
+    var savedVol = Number(localStorage.getItem('nomernoy-volume'));
+    if (isFinite(savedVol) && savedVol >= 0 && savedVol <= 100) audio.vol = savedVol;
+  } catch (e) { /* storage unavailable */ }
+  volEl.value = String(audio.vol);
+  function audioInit() {
+    if (audio.ctx) { if (audio.ctx.state === 'suspended') audio.ctx.resume(); return; }
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      var ctx = new AC(), len = Math.floor(ctx.sampleRate * 0.6), buf = ctx.createBuffer(1, len, ctx.sampleRate), data = buf.getChannelData(0), i;
+      for (i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+      audio.master = ctx.createGain();
+      audio.master.gain.value = audio.vol / 100;
+      audio.master.connect(ctx.destination);
+      audio.noise = buf;
+      audio.ctx = ctx;
+      if (ctx.state === 'suspended') ctx.resume();
+    } catch (e) { audio.ctx = null; }
+  }
+  function audioLive() { return !!audio.ctx && audio.ctx.state === 'running' && audio.on; }
+  // Short noise burst through a band-pass filter: one drum step.
+  function playTick(strength) {
+    if (!audioLive()) return;
+    var ctx = audio.ctx, t = ctx.currentTime, src = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain();
+    src.buffer = audio.noise;
+    bp.type = 'bandpass';
+    bp.frequency.value = 1500 + Math.random() * 500;
+    bp.Q.value = 1.6;
+    g.gain.setValueAtTime(0.22 * strength, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+    src.connect(bp); bp.connect(g); g.connect(audio.master);
+    src.start(t, Math.random() * 0.5, 0.04);
+  }
+  // Drum digit landing: a short synthesized key press, like a keyboard key (click + body + soft thock). No samples, no chip tones.
+  function playLand() {
+    if (!audioLive()) return;
+    var ctx = audio.ctx, t = ctx.currentTime, k = 0.95 + Math.random() * 0.1;
+    // click
+    var src = ctx.createBufferSource(), hp = ctx.createBiquadFilter(), g = ctx.createGain();
+    src.buffer = audio.noise;
+    hp.type = 'highpass'; hp.frequency.value = 2400 * k; hp.Q.value = 0.7;
+    g.gain.setValueAtTime(0.5, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.012);
+    src.connect(hp); hp.connect(g); g.connect(audio.master);
+    src.start(t, Math.random() * 0.5, 0.02);
+    // body
+    var src2 = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g2 = ctx.createGain();
+    src2.buffer = audio.noise;
+    bp.type = 'bandpass'; bp.frequency.value = 1100 * k; bp.Q.value = 2.5;
+    g2.gain.setValueAtTime(0.35, t);
+    g2.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+    src2.connect(bp); bp.connect(g2); g2.connect(audio.master);
+    src2.start(t, Math.random() * 0.5, 0.08);
+    // soft plate thock
+    var o = ctx.createOscillator(), g3 = ctx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(300 * k, t);
+    o.frequency.exponentialRampToValueAtTime(190 * k, t + 0.05);
+    g3.gain.setValueAtTime(0.25, t);
+    g3.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+    o.connect(g3); g3.connect(audio.master);
+    o.start(t); o.stop(t + 0.1);
+  }
+  // Rare number: a quick paper rustle, like banknotes, not metal.
+  function playMoney() {
+    if (!audioLive()) return;
+    var ctx = audio.ctx, t0 = ctx.currentTime, n = 7, i;
+    for (i = 0; i < n; i++) {
+      var t = t0 + i * 0.055 + Math.random() * 0.012;
+      var src = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain();
+      src.buffer = audio.noise;
+      bp.type = 'bandpass';
+      bp.frequency.value = 2600 + Math.random() * 1800;
+      bp.Q.value = 0.9;
+      var peak = 0.35 * (1 - i / (n + 2));
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(peak, t + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+      src.connect(bp); bp.connect(g); g.connect(audio.master);
+      src.start(t, Math.random() * 0.4, 0.07);
+    }
+  }
+  // A struck wooden or marimba-like note: a few inharmonic partials with fast decay. No pure beeps.
+  function strike(freq, dur, peak, t) {
+    var ctx = audio.ctx, parts = [[1, 1], [3.9, 0.22], [9.5, 0.05]], i;
+    for (i = 0; i < parts.length; i++) {
+      var o = ctx.createOscillator(), g = ctx.createGain(), d = dur / (1 + i * 1.5);
+      o.type = 'sine';
+      o.frequency.value = freq * parts[i][0];
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(peak * parts[i][1], t + 0.003);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+      o.connect(g); g.connect(audio.master);
+      o.start(t); o.stop(t + d + 0.02);
+    }
+  }
+  // Very short filtered noise: the physical "tap" at the start of a sound.
+  function tap(level, t) {
+    var ctx = audio.ctx, src = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain();
+    src.buffer = audio.noise;
+    bp.type = 'bandpass'; bp.frequency.value = 3000; bp.Q.value = 1;
+    g.gain.setValueAtTime(level, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.008);
+    src.connect(bp); bp.connect(g); g.connect(audio.master);
+    src.start(t, Math.random() * 0.5, 0.01);
+  }
+  // UI sounds: each kind of button has its own short, natural voice.
+  function playUi(kind) {
+    if (!audioLive()) return;
+    var t = audio.ctx.currentTime;
+    if (kind === 'buy') {
+      tap(0.04, t);
+      strike(523.25, 0.25, 0.14, t);
+      strike(783.99, 0.35, 0.12, t + 0.09);
+    } else if (kind === 'save') {
+      strike(880, 0.5, 0.12, t);
+      strike(1318.5, 0.6, 0.06, t + 0.07);
+    } else if (kind === 'del') {
+      tap(0.03, t);
+      strike(196, 0.2, 0.14, t);
+    } else if (kind === 'tab') {
+      tap(0.02, t);
+      strike(660, 0.1, 0.1, t);
+    } else {
+      tap(0.04, t);
+      strike(880, 0.12, 0.13, t);
+    }
+  }
+  // A drum step is played on every second digit, so the drum sounds slower.
+  function tickCheck(r) {
+    var k = Math.floor(r.pos);
+    if (k === r.lastK) return;
+    r.lastK = k;
+    r.ticks = (r.ticks || 0) + 1;
+    if (r.ticks % 2) playTick(r.mode === 'stop' ? 0.8 : 1);
+  }
+  function updateSoundBtn() {
+    soundBtn.textContent = 'Звук · ' + (audio.on ? 'вкл' : 'выкл');
+    soundBtn.setAttribute('aria-pressed', audio.on ? 'true' : 'false');
+  }
+  function setSound(on) {
+    audio.on = on;
+    try { localStorage.setItem('nomernoy-sound', on ? 'on' : 'off'); } catch (e) { /* storage unavailable */ }
+    updateSoundBtn();
+  }
+  soundBtn.addEventListener('click', function () { setSound(!audio.on); });
+  volEl.addEventListener('input', function () {
+    audio.vol = Number(volEl.value);
+    if (audio.master) audio.master.gain.value = audio.vol / 100;
+    try { localStorage.setItem('nomernoy-volume', String(audio.vol)); } catch (e) { /* storage unavailable */ }
+  });
+  // Every button on the page makes a sound; the first press also starts the audio.
+  document.addEventListener('click', function (e) {
+    audioInit();
+    var b = e.target.closest && e.target.closest('button');
+    if (!b || b.id === 'sound') return;
+    if (b.id === 'save') playUi('save');
+    else if (b.classList.contains('del')) playUi('del');
+    else if (b.classList.contains('buy')) playUi('buy');
+    else if (b.classList.contains('tab')) playUi('tab');
+    else playUi('click');
+  }, true);
+  updateSoundBtn();
+
+  function spin() {
+    if (busy) return;
+    audioInit();
+    var isFree = state.free > 0;
+    if (!isFree && state.balance < COST) { state.free = 5; writeStore(); updateUI(); return; }
+    busy = true;
+    if (isFree) state.free--; else setBalance(state.balance - COST, false);
+    clearResult();
+    var target = nextNumber(), fx = cfg().fixedDrums;
+    pending = target.slice(0, fx);
+    reels.forEach(function (r, n) {
+      r.drum.classList.remove('landed');
+      r.target = target[r.i + fx];
+      r.mode = 'spin';
+      r.v = 26 + Math.random() * 6;
+      r.stopAt = ((reduce ? 120 : 650) + n * (reduce ? 50 : 210)) / state.speed;
+      r.drum.classList.add('moving');
+      r.lastK = Math.floor(r.pos);
+      r.ticks = 0;
+    });
+    spinStart = performance.now();
+    last = spinStart;
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(frame);
+    updateUI();
+  }
+
+  var AUTO = [
+    { n: Infinity, price: 100000, name: 'Авто-крутка', eff: 'Крутит, пока не выпадет красивый номер или не кончатся рубли' }
+  ];
+  function startAuto() {
+    if (busy || autoOn || !state.auto || (state.balance < COST && state.free <= 0)) return;
+    autoOn = true;
+    autoLeft = AUTO[state.auto - 1].n;
+    autoStep();
+  }
+  function autoStep() {
+    if (!autoOn) return;
+    if (autoLeft <= 0 || (state.balance < COST && state.free <= 0)) { stopAuto(); return; }
+    autoLeft--;
+    spin();
+  }
+  function stopAuto() {
+    autoOn = false;
+    autoLeft = 0;
+    updateUI();
+  }
+
+  var tasksEl = $('tasks'), taskCount = $('taskCount'), taskRows = [];
+  var panelTasks = $('panelTasks'), panelCol = $('panelCol'), tabTasks = $('tabTasks'), tabCol = $('tabCol');
+  var taskBadge = $('taskBadge'), colBadge = $('colBadge');
+  function setPanel(p) {
+    panelTasks.hidden = p !== 'tasks';
+    panelCol.hidden = p !== 'col';
+    tabTasks.setAttribute('aria-pressed', p === 'tasks' ? 'true' : 'false');
+    tabCol.setAttribute('aria-pressed', p === 'col' ? 'true' : 'false');
+  }
+  tabTasks.addEventListener('click', function () { setPanel('tasks'); });
+  tabCol.addEventListener('click', function () { setPanel('col'); });
+  var TASKS = [
+    { id: 's10', name: 'Новичок', desc: 'Сделать 10 круток', target: 10, reward: 1000, val: function () { return state.stats.spins; } },
+    { id: 'f3', name: 'Охотник за красотой', desc: 'Поймать 3 красивых номера', target: 3, reward: 2000, val: function () { return state.stats.fancy; } },
+    { id: 'v5', name: 'Первая коллекция', desc: 'Сохранить 5 номеров', target: 5, reward: 2000, val: function () { return state.stats.saves; } },
+    { id: 's50', name: 'Крутильщик', desc: 'Сделать 50 круток', target: 50, reward: 3000, val: function () { return state.stats.spins; } },
+    { id: 'c3', name: 'Путешественник', desc: 'Покрутить номера в трёх странах', target: 3, reward: 3000, val: function () { return ORDER.filter(function (c) { return state.stats.tried[c]; }).length; } },
+    { id: 'cc3', name: 'По номеру из каждой', desc: 'Сохранить номер из каждой страны', target: 3, reward: 4000, val: function () { return ORDER.filter(function (c) { return colCount(c) > 0; }).length; } },
+    { id: 'b1000', name: 'Крупный куш', desc: 'Выиграть 8 000 ₽ за один номер', target: 8000, reward: 6000, val: function () { return state.stats.best; } },
+    { id: 's200', name: 'Завсегдатай', desc: 'Сделать 200 круток', target: 200, reward: 10000, val: function () { return state.stats.spins; } },
+    { id: 'f20', name: 'Коллекционер удачи', desc: 'Поймать 20 красивых номеров', target: 20, reward: 12000, val: function () { return state.stats.fancy; } },
+    { id: 'b5000', name: 'Джекпот', desc: 'Выиграть 24 000 ₽ за один номер', target: 24000, reward: 20000, val: function () { return state.stats.best; } }
+  ];
+  function buildTasks() {
+    TASKS.forEach(function (t, i) {
+      var li = el('li'), b = el('button', 'buy'), bar = el('div', 'bar'), fill = el('i');
+      b.type = 'button';
+      b.addEventListener('click', function () { claim(i); });
+      bar.appendChild(fill);
+      var ef = el('span', 'ef');
+      li.appendChild(el('span', 'nm', t.name));
+      li.appendChild(ef);
+      li.appendChild(bar);
+      li.appendChild(b);
+      tasksEl.appendChild(li);
+      taskRows.push({ ef: ef, fill: fill, b: b });
+    });
+  }
+  function updateTasks() {
+    var ready = 0, lock = busy || autoOn;
+    TASKS.forEach(function (t, i) {
+      var v = Math.min(t.val(), t.target), done = !!state.claimed[t.id], ok = v >= t.target, r = taskRows[i];
+      r.ef.textContent = t.desc + ' · ' + fmtN(v) + '/' + fmtN(t.target) + ' · +' + fmtN(t.reward);
+      r.fill.style.width = (v / t.target * 100) + '%';
+      r.b.textContent = done ? 'Получено' : (ok ? 'Забрать +' + fmtN(t.reward) : 'В процессе');
+      r.b.disabled = done || !ok || lock;
+      if (ok && !done) ready++;
+    });
+    taskCount.textContent = ready ? ready + ' готово' : '';
+    taskBadge.textContent = ready ? String(ready) : '';
+    colBadge.textContent = colCount(state.country) || '';
+  }
+  function claim(i) {
+    var t = TASKS[i];
+    if (busy || autoOn || state.claimed[t.id] || t.val() < t.target) return;
+    state.claimed[t.id] = true;
+    setBalance(state.balance + t.reward, true);
+    writeStore();
+    updateUI();
+  }
+
+  function renderList() {
+    var c = state.country, items = state.collection.filter(function (t) { return t.country === c; });
+    listEl.textContent = '';
+    colName.textContent = COUNTRIES[c].label;
+    countEl.textContent = items.length ? String(items.length) : '';
+    if (!items.length) {
+      listEl.appendChild(el('li', 'empty', 'Пока пусто. После крутки нажмите «В коллекцию», чтобы сохранить номер.'));
+      return;
+    }
+    items.forEach(function (t) {
+      var li = el('li');
+      li.appendChild(el('span', 'num', t.num));
+      var del = el('button', 'del', '×');
+      del.type = 'button';
+      del.setAttribute('aria-label', 'Убрать номер ' + t.num + ' из коллекции');
+      del.addEventListener('click', function () { removeNum(t.num); });
+      li.appendChild(del);
+      li.appendChild(el('span', 'why', t.pts > 0 ? '+' + fmtN(t.pts) + ' · ' + t.why : 'Без комбинаций'));
+      listEl.appendChild(li);
+    });
+  }
+
+  function saveNum() {
+    if (busy || !state.has[state.country]) return;
+    var num = fmtNum(curDigits());
+    if (state.collection.some(function (t) { return t.num === num; })) return;
+    var res = evaluate(curDigits());
+    state.stats.saves++;
+    state.collection.unshift({ country: state.country, num: num, pts: res.total, why: res.hits.map(function (h) { return h.name; }).join(', ') });
+    var cnt = 0, c = state.country;
+    state.collection = state.collection.filter(function (t) { return t.country !== c || ++cnt <= MAXCOL; });
+    writeStore();
+    renderList();
+    updateUI();
+  }
+
+  function removeNum(num) {
+    state.collection = state.collection.filter(function (t) { return t.num !== num; });
+    writeStore();
+    renderList();
+    updateUI();
+  }
+
+  function setCountry(c) {
+    if (busy || autoOn || c === state.country) return;
+    state.country = c;
+    build();
+    showDigits(curDigits());
+    clearResult();
+    noteEl.textContent = IDLE_NOTE;
+    writeStore();
+    renderList();
+    updateUI();
+  }
+
+  function init(saved) {
+    var src = saved || readStore();
+    state = sanitize(src);
+    if (state.balance < COST && state.free <= 0) state.free = 5;
+    if (!tabsEl.firstChild) buildTabs();
+    if (!taskRows.length) buildTasks();
+    build();
+    showDigits(curDigits());
+    shown = state.balance;
+    balEl.textContent = fmtN(shown);
+    clearResult();
+    noteEl.textContent = state.free > 0 ? 'Рубли закончились. Держите 5 бесплатных круток.' : IDLE_NOTE;
+    renderList();
+    updateUI();
+  }
+
+  spinBtn.addEventListener('click', spin);
+  saveBtn.addEventListener('click', saveNum);
+
+  // Command line: shown only when the page is opened with ?admin (or #admin). Works on this browser's save.
+  var adm = $('admin'), cliIn = $('cliIn'), cliLog = $('cliLog');
+  function cliPrint(text, cls) {
+    cliLog.appendChild(el('li', cls || '', text));
+    while (cliLog.children.length > 60) cliLog.removeChild(cliLog.firstChild);
+    cliLog.scrollTop = cliLog.scrollHeight;
+  }
+  function cliRun(line) {
+    var parts = line.trim().split(/\s+/), cmd = (parts[0] || '').toLowerCase(), arg = parts[1];
+    if (!cmd) return;
+    cliPrint('> ' + line.trim(), 'cmd');
+    if (cmd === 'help') {
+      cliPrint('help: список команд');
+      cliPrint('coins N (или give N): выдать N ₽');
+      cliPrint('balance: показать баланс');
+      cliPrint('speed N: скорость крутки, 1 = обычная, от 0.25 до 4');
+      cliPrint('luck N: удача, влияет на шанс красивых номеров, 1 = обычная, от 0.1 до 10');
+    } else if (cmd === 'speed' || cmd === 'luck') {
+      var key = cmd, min = cmd === 'speed' ? 0.25 : 0.1, max = cmd === 'speed' ? 4 : 10;
+      var v = Number(String(arg || '').replace(',', '.'));
+      if (arg === undefined) { cliPrint((key === 'speed' ? 'Скорость' : 'Удача') + ': ' + state[key] + '×'); return; }
+      if (!isFinite(v) || v < min || v > max) { cliPrint('Укажите число от ' + min + ' до ' + max + ', например: ' + key + ' 2', 'err'); return; }
+      state[key] = v;
+      writeStore();
+      cliPrint((key === 'speed' ? 'Скорость' : 'Удача') + ' установлена: ' + v + '×');
+    } else if (cmd === 'balance') {
+      cliPrint('Баланс: ' + fmtN(state.balance));
+    } else if (cmd === 'coins' || cmd === 'give') {
+      if (!/^\d+$/.test(arg || '') || Number(arg) < 1) { cliPrint('Укажите целое число больше нуля, например: coins 10000', 'err'); return; }
+      if (busy || autoOn) { cliPrint('Дождитесь окончания крутки.', 'err'); return; }
+      var n = Number(arg);
+      setBalance(state.balance + n, true);
+      writeStore();
+      updateUI();
+      cliPrint('Выдано ' + fmtN(n) + '. Баланс: ' + fmtN(state.balance));
+    } else {
+      cliPrint('Неизвестная команда: ' + cmd + '. Введите help.', 'err');
+    }
+  }
+  if (/[?&#]admin\b/.test(location.search + location.hash)) {
+    adm.hidden = false;
+    cliPrint('Командная строка. Введите help.');
+  }
+  // Easy way in: tap the title three times quickly to show or hide the command line.
+  var titleTaps = 0, titleTimer = 0;
+  document.querySelector('h1').addEventListener('click', function () {
+    titleTaps++;
+    clearTimeout(titleTimer);
+    titleTimer = setTimeout(function () { titleTaps = 0; }, 700);
+    if (titleTaps < 3) return;
+    titleTaps = 0;
+    adm.hidden = !adm.hidden;
+    if (!adm.hidden) { if (!cliLog.children.length) cliPrint('Командная строка. Введите help.'); cliIn.focus(); }
+  });
+  cliIn.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    var v = cliIn.value;
+    cliIn.value = '';
+    cliRun(v);
+  });
+  autoBtn.addEventListener('click', function () {
+    if (autoOn) stopAuto();
+    else startAuto();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.code === 'Space' && !autoOn && e.target === document.body) { e.preventDefault(); spin(); }
+  });
+
+  // Start right away. Some hosts (phones in particular) never call hot.ready(),
+  // which used to leave the page empty and every button dead.
+  var hot = window.claude && window.claude.hot;
+  function start(saved) {
+    try { init(saved); }
+    catch (e) { try { init(null); } catch (e2) { /* nothing more to do */ } }
+  }
+  start(hot && hot.data && hot.data.state);
+  try {
+    if (hot && typeof hot.ready === 'function') hot.ready(function (data) { if (!state) start(data && data.state); });
+  } catch (e) { /* host without ready support */ }
+  try {
+    if (hot && typeof hot.snapshot === 'function') {
+      hot.snapshot(function () { return state ? { state: state } : {}; });
+    }
+  } catch (e) { /* no hot reload */ }
+})();
+</script>
+</body>
+</html>
